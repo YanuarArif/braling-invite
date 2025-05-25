@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,61 +17,36 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Heart, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import { registerSchema, type RegisterFormData } from "@/schemas/zod";
 
 export default function RegisterCard() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false);
   const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     setError("");
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Password tidak cocok");
-      setIsLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password minimal 6 karakter");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!acceptTerms) {
-      setError("Anda harus menyetujui syarat dan ketentuan");
-      setIsLoading(false);
-      return;
-    }
 
     try {
       // TODO: Implement user registration API
       // For now, we'll simulate a successful registration
-      console.log("Registration data:", formData);
+      console.log("Registration data:", data);
 
       // After successful registration, sign in the user
       const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
+        email: data.email,
+        password: data.password,
         redirect: false,
       });
 
@@ -150,7 +127,7 @@ export default function RegisterCard() {
             </div>
 
             {/* Registration Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {error && (
                 <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
                   {error}
@@ -163,15 +140,15 @@ export default function RegisterCard() {
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="name"
-                    name="name"
                     type="text"
                     placeholder="Masukkan nama lengkap"
-                    value={formData.name}
-                    onChange={handleInputChange}
+                    {...register("name")}
                     className="pl-10"
-                    required
                   />
                 </div>
+                {errors.name && (
+                  <p className="text-sm text-red-600">{errors.name.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -180,15 +157,15 @@ export default function RegisterCard() {
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="email"
-                    name="email"
                     type="email"
                     placeholder="nama@email.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
+                    {...register("email")}
                     className="pl-10"
-                    required
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -197,13 +174,10 @@ export default function RegisterCard() {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Minimal 6 karakter"
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    {...register("password")}
                     className="pl-10 pr-10"
-                    required
                   />
                   <button
                     type="button"
@@ -213,6 +187,11 @@ export default function RegisterCard() {
                     {showPassword ? <EyeOff /> : <Eye />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-sm text-red-600">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -221,13 +200,10 @@ export default function RegisterCard() {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
-                    name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Ulangi password"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
+                    {...register("confirmPassword")}
                     className="pl-10 pr-10"
-                    required
                   />
                   <button
                     type="button"
@@ -237,14 +213,18 @@ export default function RegisterCard() {
                     {showConfirmPassword ? <EyeOff /> : <Eye />}
                   </button>
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-600">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-start space-x-2">
                 <input
                   id="terms"
                   type="checkbox"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  {...register("acceptTerms")}
                   className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded mt-1"
                 />
                 <Label htmlFor="terms" className="text-sm leading-5">
@@ -264,12 +244,13 @@ export default function RegisterCard() {
                   </Link>
                 </Label>
               </div>
+              {errors.acceptTerms && (
+                <p className="text-sm text-red-600">
+                  {errors.acceptTerms.message}
+                </p>
+              )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || !acceptTerms}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Memproses..." : "Buat Akun"}
               </Button>
             </form>
